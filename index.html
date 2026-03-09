@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gabriele Maruotti — Portfolio</title>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600&display=swap"/>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #090D12;
+      --text:      #F0F2F5;
+      --text-sub:  rgba(240,242,245,0.45);
+      --font:      'Clash Display', sans-serif;
+      --font-ui:   'Cabinet Grotesk', sans-serif;
+      --ease:      cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      cursor: none;
+      user-select: none;
+      /* locked during intro, unlocked by JS */
+      overflow: hidden;
+    }
+    body.unlocked { overflow-x: hidden; overflow-y: auto; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+
+    /* ────────────────────────────────────────
+       CURSOR
+    ──────────────────────────────────────── */
+    #cursor-dot {
+      position: fixed; z-index: 9999;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.88);
+      pointer-events: none;
+      transform: translate(-50%,-50%);
+      transition: width .2s ease, height .2s ease;
+    }
+    #cursor-ring {
+      position: fixed; z-index: 9998;
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 1.2px solid rgba(255,255,255,0.4);
+      pointer-events: none;
+      transform: translate(-50%,-50%);
+      transition: width .3s ease, height .3s ease, border-color .3s ease;
+    }
+    body.on-hover #cursor-dot  { width: 5px; height: 5px; }
+    body.on-hover #cursor-ring { width: 40px; height: 40px; border-color: rgba(255,255,255,0.75); }
+
+    /* ────────────────────────────────────────
+       FIXED BG GRADIENT (always behind everything)
+    ──────────────────────────────────────── */
+    #bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 45% at 50%  -5%,  #1A3A50 0%, transparent 70%),
+        radial-gradient(ellipse 55% 40% at 50%  108%, #0D2E3F 0%, transparent 65%),
+        radial-gradient(ellipse 40% 30% at 72%   62%, #0B2535 0%, transparent 60%),
+        linear-gradient(180deg, #0A0F15 0%, #0D1820 40%, #090D12 100%);
+    }
+    #bg::after {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      opacity: 0.5;
+    }
+
+    /* ────────────────────────────────────────
+       VIDEO BG
+       → replace src="YOUR-VIDEO.mp4" in VS Code
+    ──────────────────────────────────────── */
+    #video-bg {
+      position: fixed; inset: 0; z-index: 1;
+      width: 100%; height: 100%; object-fit: cover;
+      filter: blur(10px); transform: scale(1.07);
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s ease;
+    }
+    #video-bg.visible { opacity: 0.60; }
+    #video-overlay {
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      background: rgba(5,9,14,0.5); opacity: 0;
+      transition: opacity .25s ease;
+    }
+    #video-overlay.visible { opacity: 1; }
+
+    /* ════════════════════════════════════════
+       INTRO LAYER (position:fixed, z:10–20)
+       Hidden once user scrolls to portfolio
+    ════════════════════════════════════════ */
+    .scene {
+      position: fixed; left: 0; right: 0; top: 0; bottom: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; filter: blur(14px); transform: translateY(22px);
+      pointer-events: none;
+      transition: opacity 1.5s var(--ease), filter 1.5s var(--ease), transform 1.5s var(--ease);
+    }
+    .scene.visible  { opacity: 1; filter: blur(0); transform: translateY(0); pointer-events: auto; }
+    .scene.exit     {
+      opacity: 0; filter: blur(10px); transform: translateY(-16px); pointer-events: none;
+      transition: opacity .85s var(--ease), filter .85s var(--ease), transform .85s var(--ease);
+    }
+
+    /* hint */
+    #hint {
+      position: fixed; bottom: 2.8rem; left: 50%; transform: translateX(-50%);
+      z-index: 15; font-family: var(--font-ui); font-size: .95rem; font-weight: 700;
+      letter-spacing: .22em; text-transform: uppercase; color: var(--text-sub);
+      display: flex; align-items: center; gap: .7rem; white-space: nowrap;
+      opacity: 1; transition: opacity .8s ease;
+    }
+    #hint.hidden { opacity: 0; pointer-events: none; }
+    #hint::before {
+      content: ''; display: block; width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(240,242,245,.4); animation: hintPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes hintPulse { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:1;transform:scale(1.5)} }
+
+    /* slogan */
+    #slogan { z-index: 12; justify-content: flex-start; padding-top: 28vh; }
+    #slogan-text {
+      font-family: var(--font); font-size: clamp(1.8rem,3.8vw,3.6rem);
+      font-weight: 500; letter-spacing: -.02em; color: var(--text); text-align: center;
+    }
+
+    /* nameplate */
+    #nameplate {
+      z-index: 13; top: 28vh; bottom: auto;
+      left: 0; right: 0; width: 100vw;
+      justify-content: flex-start;
+      align-items: center;
+      gap: .55rem; overflow: visible;
+      transition: opacity .25s ease;
+    }
+    #nameplate h1 {
+      font-family: var(--font); font-size: clamp(2.2rem,5vw,4.0rem);
+      font-weight: 500; letter-spacing: -.025em; color: var(--text);
+      text-align: center; width: 100%;
+    }
+    #nameplate p {
+      font-family: var(--font); font-size: clamp(1.1rem,2vw,1.8rem);
+      font-weight: 500; letter-spacing: .04em; color: var(--text);
+      text-align: center; width: 100%;
+    }
+
+    /* intro btn-row */
+    @keyframes btnsIn {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .btn-row {
+      display: flex; flex-direction: row; align-items: center; justify-content: center;
+      width: 100%;
+      gap: 2.5rem; margin-top: 3.4rem; opacity: 0; will-change: opacity, transform;
+    }
+    .btn-row.visible {
+      animation: btnsIn 1.5s var(--ease) forwards; pointer-events: auto;
+    }
+    .btn-row.visible .cta-btn { pointer-events: auto; }
+
+    /* ── GLASS BUTTON shared style ── */
+    .cta-btn {
+      font-family: var(--font-ui); font-size: clamp(.8rem,1vw,.95rem);
+      font-weight: 700; letter-spacing: .02em; color: var(--text);
+      cursor: none; white-space: nowrap; border-radius: 999px;
+      padding: .78em 2.1em; position: relative; outline: none;
+      pointer-events: auto; isolation: isolate; will-change: transform;
+      background: rgba(217,217,217,.20);
+      box-shadow:
+        inset  1px  1px 0 rgba(255,255,255,.30),
+        inset -1px -1px 0 rgba(255,255,255,.04),
+        0 8px 32px rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.18),
+        0 0 55px rgba(217,217,217,.04);
+      backdrop-filter: blur(12px) saturate(1.4);
+      -webkit-backdrop-filter: blur(12px) saturate(1.4);
+      border: 1px solid rgba(255,255,255,.14);
+      transition: background .35s ease, box-shadow .35s ease,
+                  border-color .35s ease, transform .15s ease;
+    }
+    .cta-btn:hover {
+      background: linear-gradient(135deg, rgba(17,160,242,.25) 0%, rgba(164,9,215,.08) 100%);
+      backdrop-filter: blur(20px) saturate(1.8); -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      box-shadow: inset 1px 1px 0 rgba(17,160,242,.45), inset -1px -1px 0 rgba(164,9,215,.12),
+                  0 2px 6px rgba(0,0,0,.12), 0 0 55px rgba(17,160,242,.08);
+      border-color: rgba(17,160,242,.35);
+    }
+    /* active state for nav buttons */
+    .cta-btn.active {
+      background: linear-gradient(135deg, rgba(17,160,242,.30) 0%, rgba(164,9,215,.14) 100%);
+      border-color: rgba(17,160,242,.5);
+      box-shadow: inset 1px 1px 0 rgba(17,160,242,.5), inset -1px -1px 0 rgba(164,9,215,.15),
+                  0 0 24px rgba(17,160,242,.15);
+    }
+    .cta-btn:active { transform: scale(.94); }
+    @keyframes btnPop { 0%{transform:scale(.94)} 60%{transform:scale(1.04)} 100%{transform:scale(1)} }
+    .cta-btn.pop { animation: btnPop .38s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+    /* ════════════════════════════════════════
+       PORTFOLIO SCROLL AREA
+       starts below the 100vh intro
+    ════════════════════════════════════════ */
+    #portfolio-wrap {
+      position: relative; z-index: 5;
+      /* first child = 100vh spacer for the intro */
+    }
+    .intro-spacer { height: 100vh; }
+
+    /* ── STICKY SECTION NAV ── */
+    #section-nav {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; justify-content: center; align-items: center;
+      padding: .9rem 2rem; gap: 1.6rem;
+      background: rgba(9,13,18,.80);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      opacity: 0; pointer-events: none;
+      transition: opacity .8s ease;
+    }
+    #section-nav.visible { opacity: 1; pointer-events: auto; }
+
+    /* ── SECTION — fits in one 16:9 screen ── */
+    .portfolio-section {
+      padding: 0.8rem 3vw 0;
+      scroll-margin-top: 56px;
+      height: calc(100vh - 56px);
+      display: flex; flex-direction: column;
+    }
+
+    /* section meta row */
+    .section-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .55rem 0; flex-shrink: 0;
+    }
+    .section-meta-name,
+    .section-meta-date {
+      font-family: var(--font-ui);
+      font-size: clamp(.8rem,1vw,.95rem);
+      font-weight: 700; letter-spacing: .02em; color: var(--text-sub);
+    }
+
+    /* ── MEDIA GRID — grows to fill remaining space ── */
+    .media-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ── SECTION 1 SPECIFIC GRID — 5-column masonry layout ── */
+    #graphic-still .media-grid {
+      grid-template-columns: 1fr 2.2fr 1.6fr 2.2fr 1.6fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-areas:
+        "c1a c2  c3a c4  c5a"
+        "c1b c2  c3b c4  c5b"
+        "c1c c2  c3c c4  c5c";
+      gap: .5rem;
+    }
+    #graphic-still .media-card:nth-child(1) { grid-area: c1a; }
+    #graphic-still .media-card:nth-child(2) { grid-area: c1b; }
+    #graphic-still .media-card:nth-child(3) { grid-area: c1c; }
+    #graphic-still .media-card:nth-child(4) { grid-area: c2;  }
+    #graphic-still .media-card:nth-child(5) { grid-area: c3a; }
+    #graphic-still .media-card:nth-child(6) { grid-area: c3b / c3b / c3c / c3c; }
+    #graphic-still .media-card:nth-child(7) { grid-area: c4;  }
+    #graphic-still .media-card:nth-child(8) { grid-area: c5a; }
+    #graphic-still .media-card:nth-child(9) { grid-area: c5b / c5b / c5c / c5c; }
+
+    /* ── SECTION 1c: graphic-still-3 — 4 col layout ── */
+    #graphic-still-3 .media-card img,
+    #graphic-still-3 .media-card video {
+      object-fit: cover;
+      width: 100%; height: 100%;
+    }
+    /* card 2 = p8 — zoom in, shifted down to show feet */
+    #graphic-still-3 .media-card:nth-child(2) img {
+      object-fit: cover;
+      object-position: center 33%;
+      transform: scale(1.30);
+      transform-origin: center 75%;
+    }
+    /* card 6 = p6 — shift up slightly */
+    #graphic-still-3 .media-card:nth-child(6) img {
+      object-fit: cover;
+      object-position: center 40%;
+    }
+    /* card 3 = p3 video — slight zoom out */
+    #graphic-still-3 .media-card:nth-child(3) video {
+      transform: scale(1);
+    }
+    /* card 7 = p7 — spans 2 rows, fills naturally */
+    #graphic-still-3 .media-grid {
+      grid-template-columns: 1.4fr 1.4fr 1.8fr 1.6fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-areas:
+        "a1 b1 c  d1"
+        "a1 b2 c  d2"
+        "a2 b2 c  d2";
+      gap: .5rem;
+    }
+    #graphic-still-3 .media-card:nth-child(1) { grid-area: a1; }
+    #graphic-still-3 .media-card:nth-child(2) { grid-area: a2; }
+    #graphic-still-3 .media-card:nth-child(3) { grid-area: b1; }
+    #graphic-still-3 .media-card:nth-child(4) { grid-area: b2; }
+    #graphic-still-3 .media-card:nth-child(5) { grid-area: c;  }
+    #graphic-still-3 .media-card:nth-child(6) { grid-area: d1; }
+    #graphic-still-3 .media-card:nth-child(7) { grid-area: d2; }
+
+    /* ── 3D ANIMATION PAGE 1 — 3 cols: 16:9 grid left, portrait cover right ── */
+    [id="3d-animation"] .media-grid {
+      grid-template-columns: 1fr 1fr 1fr 0.9fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-areas:
+        "a1 a2 a3 cov"
+        "a4 a5 a6 cov"
+        "a7 a8 yt  cov";
+      gap: .5rem;
+    }
+    [id="3d-animation"] .media-card:nth-child(1)  { grid-area: a1; }
+    [id="3d-animation"] .media-card:nth-child(2)  { grid-area: a2; }
+    [id="3d-animation"] .media-card:nth-child(3)  { grid-area: a3; }
+    [id="3d-animation"] .media-card:nth-child(4)  { grid-area: a4; }
+    [id="3d-animation"] .media-card:nth-child(5)  { grid-area: a5; }
+    [id="3d-animation"] .media-card:nth-child(6)  { grid-area: a6; }
+    [id="3d-animation"] .media-card:nth-child(7)  { grid-area: a7; }
+    [id="3d-animation"] .media-card:nth-child(8)  { grid-area: a8; }
+    [id="3d-animation"] .media-card:nth-child(9)  { grid-area: yt;  }
+    [id="3d-animation"] .media-card:nth-child(10) { grid-area: cov; }
+    [id="3d-animation"] .media-card img,
+    [id="3d-animation"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    /* copertina — card completamente invisibile, solo immagine naturale */
+    [id="3d-animation"] .media-card:nth-child(10) {
+      align-self: start;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    [id="3d-animation"] .media-card:nth-child(10):hover {
+      transform: none;
+      box-shadow: none !important;
+      border-color: transparent !important;
+    }
+    [id="3d-animation"] .media-card:nth-child(10) img {
+      object-fit: contain;
+      object-position: center top;
+      height: auto;
+      border-radius: 14px;
+    }
+
+    /* ── 3D ANIMATION PAGE 2 — portrait cover left, landscape grid right ── */
+    [id="3d-animation-2"] .media-grid {
+      grid-template-columns: 0.9fr 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-areas:
+        "cov b1 b2 b3"
+        "cov b4 b5 b6"
+        "cov b7 b8 yt";
+      gap: .5rem;
+    }
+    [id="3d-animation-2"] .media-card:nth-child(1)  { grid-area: cov; }
+    [id="3d-animation-2"] .media-card:nth-child(2)  { grid-area: b1; }
+    [id="3d-animation-2"] .media-card:nth-child(3)  { grid-area: b2; }
+    [id="3d-animation-2"] .media-card:nth-child(4)  { grid-area: b3; }
+    [id="3d-animation-2"] .media-card:nth-child(5)  { grid-area: b4; }
+    [id="3d-animation-2"] .media-card:nth-child(6)  { grid-area: b5; }
+    [id="3d-animation-2"] .media-card:nth-child(7)  { grid-area: b6; }
+    [id="3d-animation-2"] .media-card:nth-child(8)  { grid-area: b7; }
+    [id="3d-animation-2"] .media-card:nth-child(9)  { grid-area: b8; }
+    [id="3d-animation-2"] .media-card:nth-child(10) { grid-area: yt; }
+    [id="3d-animation-2"] .media-card img,
+    [id="3d-animation-2"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    /* copertina — card completamente invisibile, solo immagine naturale */
+    [id="3d-animation-2"] .media-card:nth-child(1) {
+      align-self: start;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    [id="3d-animation-2"] .media-card:nth-child(1):hover {
+      transform: none;
+      box-shadow: none !important;
+      border-color: transparent !important;
+    }
+    [id="3d-animation-2"] .media-card:nth-child(1) img {
+      object-fit: contain;
+      object-position: center top;
+      height: auto;
+      border-radius: 14px;
+    }
+    /* ── 3D ANIMATION PAGE 3 — video grande centrale, formati misti ── */
+    [id="3d-animation-3"] .media-grid {
+      grid-template-columns: 1fr 1.6fr 0.9fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-areas:
+        "c1  vid  vid  por"
+        "c2  vid  vid  por"
+        "c3  c4   c5   c6 ";
+      gap: .5rem;
+    }
+    [id="3d-animation-3"] .media-card:nth-child(1) { grid-area: c1;  } /* jpg landscape */
+    [id="3d-animation-3"] .media-card:nth-child(2) { grid-area: c2;  } /* jpg landscape */
+    [id="3d-animation-3"] .media-card:nth-child(3) { grid-area: c4;  } /* png HD */
+    [id="3d-animation-3"] .media-card:nth-child(4) { grid-area: c5;  } /* png HD */
+    [id="3d-animation-3"] .media-card:nth-child(5) { grid-area: c3;  } /* png HD */
+    [id="3d-animation-3"] .media-card:nth-child(6) { grid-area: c6;  } /* png quadrato */
+    [id="3d-animation-3"] .media-card:nth-child(7) { grid-area: por; } /* jpg portrait — span 2 righe */
+    [id="3d-animation-3"] .media-card:nth-child(8) { grid-area: vid; } /* video HD — grande centrale */
+    [id="3d-animation-3"] .media-card img,
+    [id="3d-animation-3"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    /* ── ZOOM c3 c4 c6 — modifica scale() per zoomare ── */
+    [id="3d-animation-3"] .media-card:nth-child(5) img { transform: scale(1);    } /* c3  → RIGA 428 */
+    [id="3d-animation-3"] .media-card:nth-child(3) img { transform: scale(1.33); } /* c4  → RIGA 429 */
+    [id="3d-animation-3"] .media-card:nth-child(6) img { transform: scale(1.25);  } /* c6  → RIGA 430 */
+    [id="3d-animation-3"] .media-card:nth-child(4) img { transform: scale(1.38);  } /* c5  → RIGA 430 */
+    /* ── 3D ANIMATION PAGE 5 — 3 elementi 1:1 in riga centrata ── */
+
+    /* ══════════════════════════════════════════
+       EDIT & POST — 4 pagine
+    ══════════════════════════════════════════ */
+
+    /* PAGE 1 — jpg landscape + 3 gif landscape + youtube centro
+       Layout: [ f1 | yt | f2 ]
+                [ f3 | yt | f4 ] */
+    /* PAGE 1 — jpg landscape grande (riga alta span 2 col) + 3 gif + youtube piccolo 16:9 in basso destra
+       Layout: [ jpg  | jpg  | gif1 ]
+               [ gif2 | gif3 | yt   ] */
+    [id="edit-post"] .media-grid {
+      grid-template-columns: 1.6fr 1.6fr 1fr;
+      grid-template-rows: 1.4fr 1fr;
+      grid-template-areas:
+        "jpg jpg g1"
+        "g2  g3  yt";
+      gap: .5rem;
+    }
+    [id="edit-post"] .media-card:nth-child(1) { grid-area: jpg; } /* jpg landscape grande */
+    [id="edit-post"] .media-card:nth-child(2) { grid-area: g1;  } /* gif */
+    [id="edit-post"] .media-card:nth-child(3) { grid-area: g2;  } /* gif */
+    [id="edit-post"] .media-card:nth-child(4) { grid-area: g3;  } /* gif */
+    [id="edit-post"] .media-card:nth-child(5) { grid-area: yt;  } /* youtube piccolo 16:9 */
+    [id="edit-post"] .media-card img,
+    [id="edit-post"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    /* ── POSIZIONE f1 — modifica object-position per traslare l'immagine dentro la card ── */
+    /* es: "center top", "left center", "80% 30%" */
+    [id="edit-post"] .media-card:nth-child(1) img { object-position: center 10%; } /* f1.jpg */
+    /* ── ZOOM f2 — modifica scale() per zoomare — overflow:hidden mantiene il crop ── */
+    [id="edit-post"] .media-card:nth-child(2) { overflow: hidden !important; }
+    [id="edit-post"] .media-card:nth-child(2) img {
+      width: 100%; height: 100%; /* aumenta questi valori per zoom out visivo */
+      object-fit: cover;
+      transform: scale(1); /* lascia a 1, usa width/height sopra per il zoom */
+      transform-origin: center center;
+    }
+    /* youtube — forza aspect ratio 16:9 */
+    [id="edit-post"] .media-card:nth-child(5) {
+      aspect-ratio: 16 / 9;
+      align-self: end;
+    }
+
+    /* PAGE 2 — jpg portrait sinistra + 3 gif piccole (16:9) + youtube piccolo
+       Layout: [ cov | g1 | g2 ]
+               [ cov | g3 | yt ] */
+    [id="edit-post-2"] .media-grid {
+      grid-template-columns: 0.7fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      grid-template-areas:
+        "cov g1 g2"
+        "cov g3 yt";
+      gap: .5rem;
+    }
+    [id="edit-post-2"] .media-card:nth-child(1) { grid-area: cov; } /* jpg portrait */
+    [id="edit-post-2"] .media-card:nth-child(2) { grid-area: g1;  } /* gif */
+    [id="edit-post-2"] .media-card:nth-child(3) { grid-area: g2;  } /* gif */
+    [id="edit-post-2"] .media-card:nth-child(4) { grid-area: g3;  } /* gif */
+    [id="edit-post-2"] .media-card:nth-child(5) { grid-area: yt;  } /* youtube */
+    [id="edit-post-2"] .media-card img,
+    [id="edit-post-2"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    /* gif — aspect ratio 16:9 */
+    [id="edit-post-2"] .media-card:nth-child(2),
+    [id="edit-post-2"] .media-card:nth-child(3),
+    [id="edit-post-2"] .media-card:nth-child(4) { aspect-ratio: 16 / 9; align-self: center; }
+    /* youtube — aspect ratio 16:9 */
+    [id="edit-post-2"] .media-card:nth-child(5) { aspect-ratio: 16 / 9; align-self: center; }
+    /* copertina invisibile */
+    [id="edit-post-2"] .media-card:nth-child(1) {
+      align-self: start;
+      background: transparent !important; border: none !important;
+      box-shadow: none !important; backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    [id="edit-post-2"] .media-card:nth-child(1):hover {
+      transform: none; box-shadow: none !important; border-color: transparent !important;
+    }
+    [id="edit-post-2"] .media-card:nth-child(1) img {
+      object-fit: contain; object-position: center top; height: auto; border-radius: 14px;
+    }
+
+    /* PAGE 3 — stesso layout di page 2 */
+    [id="edit-post-3"] .media-grid {
+      grid-template-columns: 0.7fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      grid-template-areas:
+        "cov g1 g2"
+        "cov g3 yt";
+      gap: .5rem;
+    }
+    [id="edit-post-3"] .media-card:nth-child(1) { grid-area: cov; }
+    [id="edit-post-3"] .media-card:nth-child(2) { grid-area: g1;  }
+    [id="edit-post-3"] .media-card:nth-child(3) { grid-area: g2;  }
+    [id="edit-post-3"] .media-card:nth-child(4) { grid-area: g3;  }
+    [id="edit-post-3"] .media-card:nth-child(5) { grid-area: yt;  }
+    [id="edit-post-3"] .media-card img,
+    [id="edit-post-3"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    [id="edit-post-3"] .media-card:nth-child(2),
+    [id="edit-post-3"] .media-card:nth-child(3),
+    [id="edit-post-3"] .media-card:nth-child(4) { aspect-ratio: 16 / 9; align-self: center; }
+    [id="edit-post-3"] .media-card:nth-child(5) { aspect-ratio: 16 / 9; align-self: center; }
+    [id="edit-post-3"] .media-card:nth-child(1) {
+      align-self: start;
+      background: transparent !important; border: none !important;
+      box-shadow: none !important; backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    [id="edit-post-3"] .media-card:nth-child(1):hover {
+      transform: none; box-shadow: none !important; border-color: transparent !important;
+    }
+    [id="edit-post-3"] .media-card:nth-child(1) img {
+      object-fit: contain; object-position: center top; height: auto; border-radius: 14px;
+    }
+
+    /* PAGE 4 — jpg portrait + 2 jpg landscape + mp4
+       Layout: [ cov | v1  ]
+                [ cov | v2  ]
+                [ cov | mp4 ] */
+    [id="edit-post-4"] .media-grid {
+      grid-template-columns: 0.42fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-areas:
+        "cov j1"
+        "cov j2"
+        "cov mp";
+      gap: .5rem;
+    }
+    [id="edit-post-4"] .media-card:nth-child(1) { grid-area: cov; }
+    [id="edit-post-4"] .media-card:nth-child(2) { grid-area: j1;  }
+    [id="edit-post-4"] .media-card:nth-child(3) { grid-area: j2;  }
+    [id="edit-post-4"] .media-card:nth-child(4) { grid-area: mp;  }
+    [id="edit-post-4"] .media-card img,
+    [id="edit-post-4"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    [id="edit-post-4"] .media-card:nth-child(1) {
+      align-self: center;
+      overflow: hidden !important;
+    }
+    [id="edit-post-4"] .media-card:nth-child(1) img {
+      object-fit: contain;
+      object-position: center center;
+      width: 100%;
+      height: 100%;
+      border-radius: 14px;
+      transform: scale(1.22); /* ── ZOOM i_cover — modifica scale() per zoomare → RIGA 585 ── */
+    }
+
+    /* ── 3D ANIMATION PAGE 4 — copertina portrait sinistra + 2x2 video ── */
+    [id="3d-animation-4"] .media-grid {
+      grid-template-columns: 0.9fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      grid-template-areas:
+        "cov v1 v2"
+        "cov v3 v4";
+      gap: .5rem;
+    }
+    [id="3d-animation-4"] .media-card:nth-child(1) { grid-area: cov; }
+    [id="3d-animation-4"] .media-card:nth-child(2) { grid-area: v1; }
+    [id="3d-animation-4"] .media-card:nth-child(3) { grid-area: v2; }
+    [id="3d-animation-4"] .media-card:nth-child(4) { grid-area: v3; }
+    [id="3d-animation-4"] .media-card:nth-child(5) { grid-area: v4; }
+    [id="3d-animation-4"] .media-card img,
+    [id="3d-animation-4"] .media-card video { object-fit: cover; width: 100%; height: 100%; }
+    /* copertina — card invisibile, immagine naturale dall'alto */
+    [id="3d-animation-4"] .media-card:nth-child(1) {
+      align-self: start;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    [id="3d-animation-4"] .media-card:nth-child(1):hover {
+      transform: none;
+      box-shadow: none !important;
+      border-color: transparent !important;
+    }
+    [id="3d-animation-4"] .media-card:nth-child(1) img {
+      object-fit: contain;
+      object-position: center top;
+      height: auto;
+      border-radius: 14px;
+    }
+    #graphic-still-2 .media-card video {
+      object-fit: cover;
+      width: 100%; height: 100%;
+    }
+    /* h8 (card 8) — cover, tall spanning 2 rows */
+    #graphic-still-2 .media-card:nth-child(8) img {
+      object-fit: cover;
+      object-position: center center;
+    }
+    /* h9 (card 9) — cover to fill card completely */
+    #graphic-still-2 .media-card:nth-child(9) img {
+      object-fit: cover;
+    }
+    #graphic-still-2 .media-grid {
+      grid-template-columns: 0.85fr 0.85fr 1.55fr 2fr 1.6fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-template-areas:
+        "a1 b1 c  d1 e1"
+        "a2 b2 c  d1 e2"
+        "a3 b3 c  d2 e2";
+      gap: .5rem;
+    }
+    #graphic-still-2 .media-card:nth-child(1)  { grid-area: a1; }
+    #graphic-still-2 .media-card:nth-child(2)  { grid-area: a2; }
+    #graphic-still-2 .media-card:nth-child(3)  { grid-area: a3; }
+    #graphic-still-2 .media-card:nth-child(4)  { grid-area: b1; }
+    #graphic-still-2 .media-card:nth-child(5)  { grid-area: b2; }
+    #graphic-still-2 .media-card:nth-child(6)  { grid-area: b3; }
+    #graphic-still-2 .media-card:nth-child(7)  { grid-area: c;  }
+    #graphic-still-2 .media-card:nth-child(8)  { grid-area: d1; }
+    #graphic-still-2 .media-card:nth-child(9)  { grid-area: d2; }
+    #graphic-still-2 .media-card:nth-child(10) { grid-area: e1; }
+    #graphic-still-2 .media-card:nth-child(11) { grid-area: e2; }
+    /* ── ZOOM col 1 e col 2 — modifica scale() per zoomare ── */
+    #graphic-still-2 .media-card:nth-child(1) img { transform: scale(1.25); } /* h1 */
+    #graphic-still-2 .media-card:nth-child(2) img { transform: scale(1.25); } /* h2 */
+    #graphic-still-2 .media-card:nth-child(3) img { transform: scale(1.25); } /* h3 */
+    #graphic-still-2 .media-card:nth-child(4) img { transform: scale(1.25); } /* h4 */
+    #graphic-still-2 .media-card:nth-child(5) img { transform: scale(1.25); } /* h5 */
+    #graphic-still-2 .media-card:nth-child(6) img { transform: scale(1.25); } /* h6 */
+
+    /* ── MEDIA CARD — fills the grid cell exactly ── */
+    .media-card {
+      position: relative;
+      border-radius: 16px; overflow: hidden;
+      width: 100%; height: 100%;
+      background: rgba(40,48,58,.55);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow:
+        inset 1px 1px 0 rgba(255,255,255,.10),
+        inset -1px -1px 0 rgba(255,255,255,.02),
+        0 12px 40px rgba(0,0,0,.4);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      cursor: none;
+      transition: transform .35s var(--ease), box-shadow .35s ease, border-color .35s ease;
+    }
+    .media-card:hover {
+      transform: translateY(-3px) scale(1.003);
+      border-color: rgba(255,255,255,.16);
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.16), 0 20px 60px rgba(0,0,0,.55);
+    }
+    .media-card img, .media-card video {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block; border-radius: 16px;
+    }
+    /* g5 — zoom to face, eyes centered */
+    #graphic-still .media-card:nth-child(5) img {
+      object-position: center 25%;
+      transform: scale(1.15);
+      transform-origin: center 25%;
+    }
+    /* PNGs with transparency get a neutral dark bg */
+    .media-card img[src$=".png"] {
+      object-fit: contain;
+      background: #12181F;
+    }
+    /* g6 — zoom to fill cell, override PNG contain rule */
+    #graphic-still .media-card:nth-child(6) img {
+      object-fit: cover;
+      background: transparent;
+      transform: scale(1.4);
+      transform-origin: center center;
+    }
+
+    /* play icon overlay */
+    .media-card .play-icon {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .25s ease;
+    }
+    .media-card:hover .play-icon { opacity: 1; }
+    .play-icon svg { width: 56px; height: 56px; filter: drop-shadow(0 2px 16px rgba(0,0,0,.7)); }
+
+    /* youtube cards — play icon always visible */
+    [data-type="youtube"] .play-icon { opacity: 1; }
+    [data-type="youtube"] .play-icon svg {
+      width: 64px; height: 64px;
+      background: rgba(0,0,0,0.55);
+      border-radius: 50%;
+      padding: 12px;
+      transition: transform .25s ease, background .25s ease;
+    }
+    [data-type="youtube"]:hover .play-icon svg {
+      transform: scale(1.12);
+      background: linear-gradient(135deg, rgba(17,160,242,.7) 0%, rgba(164,9,215,.5) 100%);
+    }
+    [data-type="youtube-link"] .play-icon { opacity: 1; }
+    [data-type="youtube-link"] .play-icon svg {
+      width: 64px; height: 64px;
+      background: rgba(0,0,0,0.55);
+      border-radius: 50%;
+      padding: 12px;
+      transition: transform .25s ease, background .25s ease;
+    }
+    [data-type="youtube-link"]:hover .play-icon svg {
+      transform: scale(1.12);
+      background: linear-gradient(135deg, rgba(17,160,242,.7) 0%, rgba(164,9,215,.5) 100%);
+    }
+
+    /* card label badge */
+    .card-label {
+      position: absolute; bottom: .9rem; left: 1rem;
+      font-family: var(--font-ui); font-size: .62rem; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: rgba(255,255,255,.5);
+      background: rgba(0,0,0,.4); padding: .22rem .6rem; border-radius: 99px;
+      backdrop-filter: blur(6px);
+    }
+
+    /* ── SECTION FOOTER — sits immediately below card ── */
+    .section-footer {
+      display: flex; align-items: center;
+      gap: 1rem; padding: .55rem 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+      flex-shrink: 0;
+    }
+    .section-footer-label,
+    .section-footer-year {
+      font-family: var(--font-ui);
+      font-size: clamp(.8rem,1vw,.95rem);
+      font-weight: 700; letter-spacing: .02em;
+      color: var(--text-sub); white-space: nowrap;
+    }
+    .section-footer-line {
+      flex: 1; height: 1px; background: rgba(255,255,255,.08);
+    }
+
+    /* ════════════════════════════════════════
+       LIGHTBOX
+    ════════════════════════════════════════ */
+    #lightbox {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(5,9,14,.92);
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .4s ease;
+    }
+    #lightbox.open { opacity: 1; pointer-events: auto; }
+
+    #lightbox-inner {
+      position: relative;
+      /* size adapts to content, not fixed box */
+      max-width: 92vw;
+      max-height: 92vh;
+      border-radius: 20px; overflow: hidden;
+      box-shadow: 0 40px 100px rgba(0,0,0,.7);
+      transform: scale(.94); transition: transform .4s var(--ease);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #lightbox.open #lightbox-inner { transform: scale(1); }
+
+    #lightbox-inner img {
+      display: block;
+      max-width: 92vw;
+      max-height: 92vh;
+      width: auto; height: auto;
+      object-fit: contain;
+      border-radius: 20px;
+      background: transparent;
+    }
+    #lightbox-inner video {
+      display: block;
+      max-width: 92vw;
+      max-height: 92vh;
+      width: auto; height: auto;
+      border-radius: 20px;
+      background: #000;
+    }
+
+    /* iframe embed (YouTube / Vimeo) */
+    #lightbox-iframe-wrap {
+      position: relative;
+      width: min(90vw, 1280px);
+      padding-bottom: min(50.625vw, 720px);
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #lightbox-iframe-wrap iframe {
+      position: absolute; inset: 0; width: 100%; height: 100%; border: none;
+    }
+
+    #lightbox-close {
+      position: absolute; top: 1rem; right: 1rem; z-index: 10;
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.1); backdrop-filter: blur(8px);
+      cursor: none; display: flex; align-items: center; justify-content: center;
+      transition: background .2s ease; color: white; font-size: 1rem;
+    }
+    #lightbox-close:hover { background: rgba(255,255,255,.2); }
+
+  </style>
+</head>
+<body>
+
+  <!-- Fixed layers -->
+  <div id="bg"></div>
+  <video id="video-bg" src="YOUR-VIDEO.mp4" autoplay loop muted playsinline></video>
+  <div id="video-overlay"></div>
+
+  <!-- Cursor -->
+  <div id="cursor-dot"></div>
+  <div id="cursor-ring"></div>
+
+  <!-- ════════ INTRO ════════ -->
+  <div id="hint">Click or press Space</div>
+
+  <div id="slogan" class="scene">
+    <span id="slogan-text">Designed to move.</span>
+  </div>
+
+  <div id="nameplate" class="scene">
+    <h1>Gabriele Maruotti</h1>
+    <p>Portfolio</p>
+    <div class="btn-row">
+      <button class="cta-btn intro-btn" data-section="graphic-still">2D &amp; 3D Graphic</button>
+      <button class="cta-btn intro-btn" data-section="3d-animation">3D &amp; Animation</button>
+      <button class="cta-btn intro-btn" data-section="edit-post">Edit &amp; Post</button>
+    </div>
+  </div>
+
+  <!-- ════════ PORTFOLIO SCROLL AREA ════════ -->
+  <div id="portfolio-wrap">
+
+    <!-- 100vh spacer so sections start below the intro -->
+    <div class="intro-spacer"></div>
+
+    <!-- ── STICKY NAV ── -->
+    <nav id="section-nav">
+      <button class="cta-btn nav-btn" data-section="graphic-still">2D &amp; 3D Graphic</button>
+      <button class="cta-btn nav-btn" data-section="3d-animation">3D &amp; Animation</button>
+      <button class="cta-btn nav-btn" data-section="edit-post">Edit &amp; Post</button>
+    </nav>
+
+    <!-- ── SECTION 1: 2D & 3D Graphic ── -->
+    <section class="portfolio-section" id="graphic-still">
+      <div class="section-meta">
+        <span class="section-meta-name">Client works</span>
+        <span class="section-meta-name">Responsible for all aspects</span>
+        <span class="section-meta-date">2019-2024</span>
+      </div>
+      <div class="media-grid">
+        <!-- col 1: 3 small stacked -->
+        <div class="media-card" data-type="image" data-src="media/g1.jpg">
+          <img src="media/g1.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/g2.jpg">
+          <img src="media/g2.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/g3.jpg">
+          <img src="media/g3.jpg" alt=""/></div>
+        <!-- col 2: 1 tall video -->
+        <div class="media-card" data-type="video" data-src="media/g4.mp4">
+          <video src="media/g4.mp4" autoplay loop muted playsinline></video>
+        </div>
+        <!-- col 3: landscape top + tall bottom -->
+        <div class="media-card" data-type="image" data-src="media/g5.jpg">
+          <img src="media/g5.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/g6.png">
+          <img src="media/g6.png" alt=""/></div>
+        <!-- col 4: 1 tall video -->
+        <div class="media-card" data-type="video" data-src="media/g7.mp4">
+          <video src="media/g7.mp4" autoplay loop muted playsinline></video>
+        </div>
+        <!-- col 5: small top + tall bottom -->
+        <div class="media-card" data-type="image" data-src="media/g8.jpg">
+          <img src="media/g8.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/g9.JPG">
+          <img src="media/g9.JPG" alt=""/></div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 1b: 2D & 3D Graphic — page 2 ── -->
+    <section class="portfolio-section" id="graphic-still-2">
+      <div class="section-meta">
+        <span class="section-meta-name">IMMATERIAL</span>
+        <span class="section-meta-name">Responsible for all aspects</span>
+        <span class="section-meta-date">2023–2025</span>
+      </div>
+      <div class="media-grid">
+        <!-- col 1: 3 PNGs stacked -->
+        <div class="media-card" data-type="image" data-src="media/h1.png">
+          <img src="media/h1.png" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h2.png">
+          <img src="media/h2.png" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h3.png">
+          <img src="media/h3.png" alt=""/></div>
+        <!-- col 2: 3 PNGs stacked -->
+        <div class="media-card" data-type="image" data-src="media/h4.png">
+          <img src="media/h4.png" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h5.png">
+          <img src="media/h5.png" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h6.png">
+          <img src="media/h6.png" alt=""/></div>
+        <!-- col 3: 1 full-height video -->
+        <div class="media-card" data-type="video" data-src="media/h7.mp4">
+          <video src="media/h7.mp4" autoplay loop muted playsinline></video>
+        </div>
+        <!-- col 4: 2 PNGs stacked -->
+        <div class="media-card" data-type="image" data-src="media/h8.png">
+          <img src="media/h8.png" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h9.png">
+          <img src="media/h9.png" alt=""/></div>
+        <!-- col 5: 2 JPGs stacked -->
+        <div class="media-card" data-type="image" data-src="media/h10.jpg">
+          <img src="media/h10.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h11.jpg">
+          <img src="media/h11.jpg" alt=""/></div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 1c: 2D & 3D Graphic — page 3 ── -->
+    <section class="portfolio-section" id="graphic-still-3">
+      <div class="section-meta">
+        <span class="section-meta-name">Personal Works</span>
+        <span class="section-meta-name">Responsible for all aspects</span>
+        <span class="section-meta-date">2021–2024</span>
+      </div>
+      <div class="media-grid">
+        <!-- col 1: NOIA_content1 tall top + p8 (meditating) square bottom -->
+        <div class="media-card" data-type="image" data-src="media/p1.png">
+          <img src="media/p1.png" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/p8.png">
+          <img src="media/p8.png" alt=""/></div>
+        <!-- col 2: VIDEO square top + NOIA_content2 tall bottom -->
+        <div class="media-card" data-type="video" data-src="media/p3.mp4">
+          <video id="p3-video" src="media/p3.mp4" autoplay loop muted playsinline></video>
+        </div>
+        <div class="media-card" data-type="image" data-src="media/p4.png">
+          <img src="media/p4.png" alt=""/></div>
+        <!-- col 3: don't_mess full height -->
+        <div class="media-card" data-type="image" data-src="media/p5.jpeg">
+          <img src="media/p5.jpeg" alt=""/></div>
+        <!-- col 4: 2 cards — d1 top, d2 tall bottom -->
+        <div class="media-card" data-type="image" data-src="media/p6.png">
+          <img src="media/p6.png" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/p7.jpeg">
+          <img src="media/p7.jpeg" alt=""/></div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section> 
+
+    <!-- ── SECTION 2: 3D & Animation — page 1 ── -->
+    <section class="portfolio-section" id="3d-animation">
+      <div class="section-meta">
+        <span class="section-meta-name">Pupstraction Season 1 and 2</span>
+        <span class="section-meta-name">Responsible for props shading, texturing and UVs</span>
+        <span class="section-meta-date">2022-2023</span>
+      </div>
+      <div class="media-grid">
+        <!-- 8 x 16:9 images -->
+        <div class="media-card" data-type="image" data-src="media/a1.jpg"><img src="media/a1.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/a2.jpg"><img src="media/a2.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/a3.jpg"><img src="media/a3.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/a4.jpg"><img src="media/a4.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/a5.jpg"><img src="media/a5.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/a6.jpg"><img src="media/a6.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/a7.jpg"><img src="media/a7.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/a8.jpg"><img src="media/a8.jpg" alt=""/></div>
+        <!-- YouTube video -->
+        <div class="media-card" data-type="youtube" data-src="https://www.youtube.com/embed/QxZrpICwdJU?autoplay=1&mute=0">
+          <img src="https://img.youtube.com/vi/QxZrpICwdJU/maxresdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;"/>
+          <div class="play-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+        <!-- portrait cover — right col, full height -->
+        <div class="media-card" data-type="image" data-src="media/a_cover.png"><img src="media/a_cover.png" alt=""/></div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 2b: 3D & Animation — page 2 ── -->
+    <section class="portfolio-section" id="3d-animation-2">
+      <div class="section-meta">
+        <span class="section-meta-name">Puppy Dog Pals Season 1,2,3</span>
+        <span class="section-meta-name">Responsible for props shading, texturing and UVs</span>
+        <span class="section-meta-date">2020-2022</span>
+      </div>
+      <div class="media-grid">
+        <!-- portrait cover — left col, full height -->
+        <div class="media-card" data-type="image" data-src="media/b_cover.jpeg"><img src="media/b_cover.jpeg" alt=""/></div>
+        <!-- 8 x landscape images -->
+        <div class="media-card" data-type="image" data-src="media/b1.jpg"><img src="media/b1.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/b2.jpg"><img src="media/b2.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/b3.jpg"><img src="media/b3.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/b4.jpg"><img src="media/b4.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/b5.jpg"><img src="media/b5.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/b6.jpg"><img src="media/b6.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/b7.jpg"><img src="media/b7.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/b8.jpg"><img src="media/b8.jpg" alt=""/></div>
+        <!-- YouTube video -->
+        <div class="media-card" data-type="youtube" data-src="https://www.youtube.com/embed/FXW8LxZ_H5w?autoplay=1&mute=0">
+          <img src="https://img.youtube.com/vi/FXW8LxZ_H5w/maxresdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;"/>
+          <div class="play-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+
+    <!-- ── SECTION 2c: 3D & Animation — page 3 ── -->
+    <section class="portfolio-section" id="3d-animation-3">
+      <div class="section-meta">
+        <span class="section-meta-name">Autopromotec rebranding</span>
+        <span class="section-meta-name">Responsible for 3D, animation and editing</span>
+        <span class="section-meta-date">2025</span>
+      </div>
+      <div class="media-grid">
+        <!-- card 1: jpg landscape 2048x1365 — sinistra alto -->
+        <div class="media-card" data-type="image" data-src="media/c1.jpg"><img src="media/c1.jpg" alt=""/></div>
+        <!-- card 2: jpg landscape 2048x1365 — sinistra basso -->
+        <div class="media-card" data-type="image" data-src="media/c2.jpg"><img src="media/c2.jpg" alt=""/></div>
+        <!-- card 3: png HD — riga bassa col 1 -->
+        <div class="media-card" data-type="image" data-src="media/c3.png"><img src="media/c3.png" alt=""/></div>
+        <!-- card 4: png HD — riga bassa col 2 -->
+        <div class="media-card" data-type="image" data-src="media/c4.png"><img src="media/c4.png" alt=""/></div>
+        <!-- card 5: png HD — riga bassa col 3 -->
+        <div class="media-card" data-type="image" data-src="media/c5.png"><img src="media/c5.png" alt=""/></div>
+        <!-- card 6: png quadrato — riga bassa col 4 -->
+        <div class="media-card" data-type="image" data-src="media/c6.png"><img src="media/c6.png" alt=""/></div>
+        <!-- card 7: jpg portrait 1365x2048 — destra span 2 righe -->
+        <div class="media-card" data-type="image" data-src="media/c7.jpg"><img src="media/c7.jpg" alt=""/></div>
+        <!-- card 8: video Full HD — grande centrale span 2 righe -->
+        <div class="media-card" data-type="video" data-src="media/c8.mp4">
+          <video src="media/c8.mp4" autoplay loop muted playsinline></video>
+        </div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 2d: 3D & Animation — page 4 ── -->
+    <section class="portfolio-section" id="3d-animation-4">
+      <div class="section-meta">
+        <span class="section-meta-name">CATHARSIS</span>
+        <span class="section-meta-name">Responsible for direction, 3D, animation, editing</span>
+        <span class="section-meta-date">2026</span>
+      </div>
+      <div class="media-grid">
+        <!-- copertina portrait 2067x2953 — sinistra, full height -->
+        <div class="media-card" data-type="image" data-src="media/d_cover.png"><img src="media/d_cover.png" alt=""/></div>
+        <!-- 4 video mp4 — griglia 2x2 -->
+        <div class="media-card" data-type="image" data-src="media/d1.gif"><img src="media/d1.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/d2.gif"><img src="media/d2.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/d3.gif"><img src="media/d3.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/d4.gif"><img src="media/d4.gif" alt=""/></div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 2e: 3D & Animation — page 5 ── -->
+    <!-- ── SECTION 3: Edit & Post — page 1 ── -->
+    <section class="portfolio-section" id="edit-post">
+      <div class="section-meta">
+        <span class="section-meta-name">Black Smoke</span>
+        <span class="section-meta-name">Responsible for edit & post</span>
+        <span class="section-meta-date">2019</span>
+      </div>
+      <div class="media-grid">
+        <div class="media-card" data-type="image" data-src="media/f1.jpg"><img src="media/f1.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/f2.gif"><img src="media/f2.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/f3.gif"><img src="media/f3.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/f4.gif"><img src="media/f4.gif" alt=""/></div>
+        <div class="media-card" data-type="youtube-link" data-src="https://www.youtube.com/watch?v=ibK2HjJiTaQ?autoplay=1&mute=0">
+          <img src="https://img.youtube.com/vi/ibK2HjJiTaQ/maxresdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;"/>
+          <div class="play-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 3b: Edit & Post — page 2 ── -->
+    <section class="portfolio-section" id="edit-post-2">
+      <div class="section-meta">
+        <span class="section-meta-name">Free to Roam</span>
+        <span class="section-meta-name">Responsible for edit & post</span>
+        <span class="section-meta-date">2020</span>
+      </div>
+      <div class="media-grid">
+        <div class="media-card" data-type="image" data-src="media/g_cover.jpg"><img src="media/g_cover.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/g1.gif"><img src="media/g1.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/g2.gif"><img src="media/g2.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/g3.gif"><img src="media/g3.gif" alt=""/></div>
+        <div class="media-card" data-type="youtube-link" data-src="https://www.youtube.com/watch?v=vkSCQUfdhXM?autoplay=1&mute=0">
+          <img src="https://img.youtube.com/vi/vkSCQUfdhXM/maxresdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;"/>
+          <div class="play-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 3c: Edit & Post — page 3 ── -->
+    <section class="portfolio-section" id="edit-post-3">
+      <div class="section-meta">
+        <span class="section-meta-name">Storm Boy</span>
+        <span class="section-meta-name">Responsible for edit & post</span>
+        <span class="section-meta-date">2020</span>
+      </div>
+      <div class="media-grid">
+        <div class="media-card" data-type="image" data-src="media/h_cover.jpg"><img src="media/h_cover.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h1.gif"><img src="media/h1.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h2.gif"><img src="media/h2.gif" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/h3.gif"><img src="media/h3.gif" alt=""/></div>
+        <div class="media-card" data-type="youtube-link" data-src="https://www.youtube.com/watch?v=DUA6tQmNQXg?autoplay=1&mute=0">
+          <img src="https://img.youtube.com/vi/DUA6tQmNQXg/maxresdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;"/>
+          <div class="play-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+    <!-- ── SECTION 3d: Edit & Post — page 4 ── -->
+    <section class="portfolio-section" id="edit-post-4">
+      <div class="section-meta">
+        <span class="section-meta-name">The End: Voodoo Ranger Film Festival</span>
+        <span class="section-meta-name">Responsible for edit & post</span>
+        <span class="section-meta-date">2021</span>
+      </div>
+      <div class="media-grid">
+        <div class="media-card" data-type="image" data-src="media/i_cover.jpg"><img src="media/i_cover.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/i1.jpg"><img src="media/i1.jpg" alt=""/></div>
+        <div class="media-card" data-type="image" data-src="media/i2.jpg"><img src="media/i2.jpg" alt=""/></div>
+        <div class="media-card" data-type="youtube-link" data-src="https://vimeo.com/711593163">
+          <div style="width:100%;height:100%;background:#0a0e14;border-radius:16px;"></div>
+          <div class="play-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>
+        </div>
+      </div>
+      <div class="section-footer">
+        <span class="section-footer-label">Gabriele Maruotti Portfolio</span>
+        <div class="section-footer-line"></div>
+        <span class="section-footer-year">2026</span>
+      </div>
+    </section>
+
+  </div><!-- /portfolio-wrap -->
+
+  <!-- ════════ LIGHTBOX ════════ -->
+  <div id="lightbox">
+    <div id="lightbox-inner">
+      <button id="lightbox-close" aria-label="Close">&times;</button>
+      <div id="lightbox-content"></div>
+    </div>
+  </div>
+
+<script>
+  /* ══ CURSOR ══ */
+  const dot  = document.getElementById('cursor-dot');
+  const ring = document.getElementById('cursor-ring');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e => {
+    mx=e.clientX; my=e.clientY;
+    dot.style.left=mx+'px'; dot.style.top=my+'px';
+  });
+  (function lerpRing(){
+    rx+=(mx-rx)*.10; ry+=(my-ry)*.10;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    requestAnimationFrame(lerpRing);
+  })();
+  document.addEventListener('mouseover', e => {
+    const isBtn = e.target.closest('a,button,.media-card');
+    const isIntroBtn = e.target.closest('.intro-btn');
+    if (isBtn && (!isIntroBtn || state === 3)) document.body.classList.add('on-hover');
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('a,button,.media-card')) document.body.classList.remove('on-hover');
+  });
+
+  /* ══ ELEMENTS ══ */
+  const hint       = document.getElementById('hint');
+  const slogan     = document.getElementById('slogan');
+  const nameplate  = document.getElementById('nameplate');
+  const btnRow     = nameplate.querySelector('.btn-row');
+  const videoBg    = document.getElementById('video-bg');
+  const videoOvl   = document.getElementById('video-overlay');
+  const sectionNav = document.getElementById('section-nav');
+
+  /* ══ INTRO STATE MACHINE ══ */
+  let state = 0;
+
+  function advance() {
+    if (state === 0) {
+      hint.classList.add('hidden');
+      slogan.classList.add('visible');
+      videoBg.play().catch(()=>{});
+      setTimeout(()=>{
+        // slow cinematic fade-in on first reveal only
+        videoBg.style.transition = 'opacity 1.8s var(--ease)';
+        videoOvl.style.transition = 'opacity 1.8s var(--ease)';
+        videoBg.classList.add('visible');
+        videoOvl.classList.add('visible');
+        // revert to fast after intro completes
+        setTimeout(()=>{
+          videoBg.style.transition = '';
+          videoOvl.style.transition = '';
+        }, 2000);
+      }, 500);
+      state = 1; return;
+    }
+    if (state === 1) {
+      slogan.classList.remove('visible'); slogan.classList.add('exit');
+      setTimeout(()=>{
+        nameplate.classList.add('visible');
+        setTimeout(()=>{ btnRow.classList.add('visible'); state=3; }, 1500);
+      }, 350);
+      state = 2; return;
+    }
+  }
+
+  document.addEventListener('click', e => {
+    if (e.target.closest('.cta-btn,.media-card,#lightbox')) return;
+    advance();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.code==='Space' && state<2){ e.preventDefault(); advance(); }
+    if (e.code==='Escape') closeLightbox();
+  });
+
+  /* ══ CTA BUTTON POP ══ */
+  function popBtn(btn) {
+    btn.classList.remove('pop'); void btn.offsetWidth;
+    btn.classList.add('pop');
+    btn.addEventListener('animationend', ()=>btn.classList.remove('pop'), {once:true});
+  }
+
+  /* ══ SCROLL TO SECTION ══ */
+  function scrollToSection(sectionId) {
+    // Unlock body scroll first
+    document.body.classList.add('unlocked');
+    sectionNav.classList.add('visible');
+
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+
+    // Small delay so unlock takes effect before scroll
+    setTimeout(()=>{
+      target.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 60);
+
+    setActiveNav(sectionId);
+  }
+
+  function setActiveNav(sectionId) {
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.section === sectionId);
+    });
+  }
+
+  /* ══ INTRO BUTTONS ══ */
+  document.querySelectorAll('.intro-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (state !== 3) return; // ignore clicks until buttons are fully visible
+      popBtn(btn);
+      scrollToSection(btn.dataset.section);
+    });
+  });
+
+  /* ══ NAV BUTTONS ══ */
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      popBtn(btn);
+      scrollToSection(btn.dataset.section);
+    });
+  });
+
+  /* ══ ACTIVE NAV ON SCROLL ══ */
+  const sections    = document.querySelectorAll('.portfolio-section');
+  const navHeight   = 56;
+  let introVisible  = false; // tracks whether intro is currently shown over portfolio
+
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    const vh      = window.innerHeight;
+
+    // ── Intro visibility ──
+    // Hide intro once scrolled past 20% of viewport
+    if (scrollY > vh * 0.2) {
+      if (introVisible !== false) {
+        // fade out all intro elements
+        nameplate.style.opacity = '0';
+        nameplate.style.pointerEvents = 'none';
+        videoBg.style.opacity = '0';
+        videoOvl.style.opacity = '0';
+        sectionNav.classList.add('visible');
+        introVisible = false;
+      }
+    } else {
+      if (introVisible !== true && state >= 3) {
+        // restore intro elements when back at top
+        nameplate.style.opacity = '1';
+        nameplate.style.pointerEvents = 'auto';
+        videoBg.style.opacity = '0.52';
+        videoOvl.style.opacity = '1';
+        sectionNav.classList.remove('visible');
+        introVisible = true;
+      }
+    }
+
+    // ── Active nav button ──
+    let current = null;
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= navHeight + 40) current = sec.id;
+    });
+    if (current) {
+      // treat graphic-still-2 as part of graphic-still for nav highlighting
+      const navId = (current === 'graphic-still-2' || current === 'graphic-still-3') ? 'graphic-still' : (current === '3d-animation-2' || current === '3d-animation-3' || current === '3d-animation-4') ? '3d-animation' : (current === 'edit-post-2' || current === 'edit-post-3' || current === 'edit-post-4') ? 'edit-post' : current;
+      setActiveNav(navId);
+    }
+  }, { passive:true });
+
+  /* ══ LIGHTBOX ══ */
+  const lightbox        = document.getElementById('lightbox');
+  const lightboxContent = document.getElementById('lightbox-content');
+  const lightboxClose   = document.getElementById('lightbox-close');
+
+  function openLightbox(card) {
+    const type = card.dataset.type;
+    const src  = card.dataset.src;
+    lightboxContent.innerHTML = '';
+
+    if (!src) return; // placeholder — no src yet
+
+    if (type === 'image') {
+      const img = document.createElement('img');
+      img.src = src; img.alt = '';
+      lightboxContent.appendChild(img);
+
+    } else if (type === 'video') {
+      const vid = document.createElement('video');
+      vid.src = src; vid.controls = true; vid.autoplay = true;
+      lightboxContent.appendChild(vid);
+
+    } else if (type === 'youtube' || type === 'vimeo') {
+      const wrap = document.createElement('div');
+      wrap.id = 'lightbox-iframe-wrap';
+      const iframe = document.createElement('iframe');
+      // add autoplay only if not already in src
+      iframe.src = src.includes('autoplay') ? src : src + (src.includes('?') ? '&' : '?') + 'autoplay=1';
+      iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+      iframe.allowFullscreen = true;
+      wrap.appendChild(iframe);
+      lightboxContent.appendChild(wrap);
+
+    } else if (type === 'youtube-link') {
+      // video embedding disabled — open directly on YouTube
+      window.open(src, '_blank');
+      return; // don't open lightbox
+    }
+
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden'; // freeze scroll while lightbox open
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    lightboxContent.innerHTML = ''; // stop video/iframe
+    document.body.style.overflow = '';
+  }
+
+  lightboxClose.addEventListener('click', e => { e.stopPropagation(); closeLightbox(); });
+  lightbox.addEventListener('click', e => { if(e.target===lightbox) closeLightbox(); });
+
+  document.querySelectorAll('.media-card').forEach(card => {
+    card.addEventListener('click', e => { e.stopPropagation(); openLightbox(card); });
+  });
+
+  // ── Vimeo thumbnail loader (oEmbed — CORS ok) ──
+  document.querySelectorAll('[data-type="youtube-link"][data-src*="vimeo.com"]').forEach(card => {
+    const id = card.dataset.src.match(/vimeo\.com\/(\d+)/)?.[1];
+    if (!id) return;
+    fetch(`https://vimeo.com/api/oembed.json?url=https://vimeo.com/${id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.thumbnail_url) return;
+        const img = document.createElement('img');
+        img.src = data.thumbnail_url;
+        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:16px;';
+        card.insertBefore(img, card.firstChild);
+      }).catch(() => {});
+  });
+
+</script>
+</body>
+</html>
